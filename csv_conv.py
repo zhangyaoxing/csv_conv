@@ -9,7 +9,7 @@ def print_help():
     print >> sys.stderr, "  [-h/--help]: Show this message."
     print >> sys.stderr, "  [-s]: Define sperator. Defaults to comma."
     print >> sys.stderr, "  [-q]: Define text qualifier. Defaults to auto detect."
-    print >> sys.stderr, "  [-t]: Trim white space at the beginning and end. Defaults to true."
+    print >> sys.stderr, "  [-t]: Trim white space at the beginning and end of each field. Defaults to true."
     print >> sys.stderr, "  <filename>: csv file name."
 
 def get_parameters():
@@ -67,14 +67,16 @@ if not args.has_key['-q']:
 STATES = {
     "start": 0,
     "qualifier": 1,
-    "seperator": 2,
+    "qualifier_close": 2,
+    "seperator": 3,
+    "field": 4,
+    "field_in_qualifier": 5
 }
 SUB_STATES = {
     "none": 0,
-    "pre_seperator": 1,
-    "seperator": 2,
-    "end_seperator": 3,
-    "qualifier": 4
+    "seperator": 1,
+    "end_seperator": 2,
+    "qualifier": 3
 }
 
 class CSVStateMachine:
@@ -82,13 +84,40 @@ class CSVStateMachine:
         self.seperator = s
         self.qualifier = q
         self.output = output
-        self.stat = STATES["start"]
+        self.state = STATES["start"]
         self.sub_stat = SUB_STATES["none"]
-        self.queue_buff = []
         self.in_buff = ""
+        self.buff = []
+        self.fields = []
     def feed(self, byte):
-        self.temp_buff += byte
-        if self.in_buff == self.qualifier:
-            self.stat = STATES["qualifier"]
-            self.sub_stat = SUB_STATES["none"]
-        # if self.state == STATS["start"]:
+        self.in_buff += byte
+        self.state_qualifier()
+        if self.state == STATES["field"]:
+            if self.qualifier == self.in_buff:
+                self.buff.append(self.in_buff)
+                self.in_buff = ""
+                self.state = STATES["qualifier_close"]
+            elif self.seperator.startswith(self.in_buff):
+                # TODO:
+                print ""
+            else:
+                self.buff += self.in_buff
+                self.in_buff = ""
+
+        if self.state == STATS["seperator"]:
+            # could be seperator but seperator can be multiple characters
+            if self.seperator == self.in_buff:
+                # seperator complete, add an empty field
+                self.fields.append(self.in_buff)
+                self.state = STATES["qualifier"]
+                self.sub_stat = SUB_STATES["none"]
+        else:
+            self.state = STATES["field"]
+    def state_qualfier(self):
+        if self.state == STATES["qualifier"]:
+            # branches from "start" state
+            self.buff[0] = ""
+            if self.qualifier != "" and self.in_buff == self.qualifier:
+                # enter "field" state
+                self.in_buff = ""
+            self.state = STATES["field"]
