@@ -84,7 +84,7 @@ class CSVStateMachine:
         self.buff = buff
         length = len(buff)
         for i in range(0, length):
-            self.state_qualifier()
+            self._state_qualifier()
             self._state_qualifier_close()
             self._state_seperator()
             self._state_field()
@@ -100,7 +100,7 @@ class CSVStateMachine:
                 print >> sys.stderr, "-k set to stop on error. exiting..."
                 exit()
 
-    def state_qualifier(self):
+    def _state_qualifier(self):
         if self.state == STATES["qualifier"]:
             # TODO: BOM is not properly handled here. Fix it!
             psblQual = self.buff[self.base_pos:self.base_pos + len(self.qualifier)]
@@ -158,35 +158,42 @@ class CSVStateMachine:
 
     def _state_field_in_qualifier(self):
         if self.state == STATES["field_in_qualifier"]:
-            for i in range(self.base_pos, len(self.buff) - len(self.qualifier) + 1):
+            length = len(self.buff)
+            i = self.base_pos
+            while i < length:
                 j = i + len(self.qualifier)
                 currStr = self.buff[i:j]
                 if currStr == self.qualifier:
                     # closing qualifier detected
-                    # if it's followed by a seperator or line end then it's qualified
                     # otherwise it should be a normal field charactor
                     k = j + len(self.seperator)
                     psblSprt = self.buff[j:k]
                     psblEnd = self.buff[j:j+1]
                     if psblSprt == self.seperator or psblEnd in ['\r', '\n', '']:
+                        # qualifier is followed by seperator or line end or EOF.
                         field = self.buff[self.base_pos:i]
                         self._push_field(field)
                         self.state = STATES["qualifier_close"]
                         self.base_pos = i
                         break
                     else:
-                        # try to detect qualifier escape. e.g. "".
-                        # TODO: This logic is not correct when """ appears.
+                        # try to detect qualifier escape. e.g. "". 
+                        # however field like "ab"" should not be treated as escape.
+                        # depends on if 2nd qualifier followed by a seperator.
                         k = j + len(self.qualifier)
-                        afterQual = self.buff[j:k]
-                        k = i - len(self.qualifier)
-                        beforeQual = self.buff[k:i]
-                        if (afterQual == self.qualifier or beforeQual == self.qualifier) and self.qualifier != "":
-                            continue
-                        else:
-                            # escape qualifier by repeat it once
-                            self.buff = self.buff[:j] + self.qualifier + self.buff[j:]
-                            i += len(self.qualifier)
+                        after = self.buff[j:k]
+                        l = k + len(self.seperator)
+                        sndAfter = self.buff[k:l]
+                        psblEnd = self.buff[k: k + 1]
+                        if after == self.qualifier:
+                            if sndAfter == self.seperator or psblEnd in ['\r', '\n', '']:
+                                # escape current qualifier by repeat it once
+                                self.buff = self.buff[:j] + self.qualifier + self.buff[j:]
+                                i += len(self.qualifier)
+                            else:
+                                # skip the immediate after qualifier
+                                i += len(self.qualifier)
+                i += 1
             if self.state == STATES["field_in_qualifier"]:
                 # searched to the end still can't find closing qualifier. something is wrong.
                 self.state = STATES["invalid"]
