@@ -58,7 +58,8 @@ STATES = {
     "seperator": "seperator",
     "field": "field",
     "field_in_qualifier": "field_in_qualifier",
-    "end": "end"
+    "end": "end",
+    "invalid": "invalid"
 }
 
 class CSVStateMachine:
@@ -82,14 +83,18 @@ class CSVStateMachine:
         self.base_pos = 0
         self.buff = buff
         length = len(buff)
-        while self.base_pos < length:
+        for i in range(0, length):
             self.state_qualifier()
             self.state_qualifier_close()
             self.state_seperator()
             self.state_field()
             self.state_field_in_qualifier()
+            if self.state == STATES["end"] or self.state == STATES["invalid"]:
+                break
+            
+        if self.state == STATES["end"]:
             self.state_end()
-        if self.state != STATES["end"]:
+        else:
             print >> sys.stderr, "Couldn't parse this line: {0}".format(line)
             if not self.skip_error:
                 print >> sys.stderr, "-k set to stop on error. exiting..."
@@ -98,10 +103,10 @@ class CSVStateMachine:
     def state_qualifier(self):
         if self.state == STATES["qualifier"]:
             # TODO: BOM is not properly handled here. Fix it!
-            string = self.buff[self.base_pos:self.base_pos + len(self.qualifier)]
-            if string == self.qualifier and self.qualifier != "":
+            psblQual = self.buff[self.base_pos:self.base_pos + len(self.qualifier)]
+            if psblQual == self.qualifier and self.qualifier != "":
                 # recognized qualifier
-                self.base_pos = len(self.qualifier)
+                self.base_pos += len(self.qualifier)
                 self.state = STATES["field_in_qualifier"]
             else:
                 self.state = STATES["field"]
@@ -117,8 +122,8 @@ class CSVStateMachine:
     def state_seperator(self):
         if self.state == STATES["seperator"]:
             i = self.base_pos + len(self.seperator)
-            string = self.buff[self.base_pos:i]
-            if string == self.seperator:
+            psblSprt = self.buff[self.base_pos:i]
+            if psblSprt == self.seperator:
                 self.base_pos = i
                 self.state = STATES["qualifier"]
             # else:
@@ -126,16 +131,16 @@ class CSVStateMachine:
     def state_field(self):
         if self.state == STATES["field"]:
             i = self.base_pos + 1
-            string = self.buff[self.base_pos:i]
-            if string in ['\r', '\n', '']:
+            psblEnd = self.buff[self.base_pos:i]
+            if psblEnd in ['\r', '\n', '']:
                 # last field is empty
                 self.push_field("")
                 self.state = STATES["end"]
             else:
-                for i in range(self.base_pos, len(self.buff) - len(self.qualifier)):
+                for i in range(self.base_pos, len(self.buff)):
                     j = i + len(self.seperator)
-                    string = self.buff[i:j]
-                    if string == self.seperator:
+                    psblEnd = self.buff[i:j]
+                    if psblEnd == self.seperator:
                         field = self.buff[self.base_pos:i]
                         self.push_field(field)
                         self.state = STATES["seperator"]
@@ -143,45 +148,48 @@ class CSVStateMachine:
                         break
                     else:
                         j = i + 1
-                        string = self.buff[i:j]
-                        if string in ['\r', '\n']:
+                        psblEnd = self.buff[j:j + 1]
+                        if psblEnd in ['\r', '\n', '']:
                             # end of line
-                            field = self.buff[self.base_pos:i]
+                            field = self.buff[self.base_pos:j]
                             self.push_field(field)
                             self.state = STATES["end"]
                             break
 
     def state_field_in_qualifier(self):
         if self.state == STATES["field_in_qualifier"]:
-            for i in range(self.base_pos, len(self.buff) - len(self.qualifier)):
+            for i in range(self.base_pos, len(self.buff) - len(self.qualifier) + 1):
                 j = i + len(self.qualifier)
-                if self.buff[i:j] == self.qualifier:
+                currStr = self.buff[i:j]
+                if currStr == self.qualifier:
                     # closing qualifier detected
                     # if it's followed by a seperator or line end then it's qualified
                     # otherwise it should be a normal field charactor
                     k = j + len(self.seperator)
-                    afterStr = self.buff[j:j+1]
-                    if self.buff[j:k] == self.seperator or afterStr in ['\r', '\n', '']:
+                    psblSprt = self.buff[j:k]
+                    psblEnd = self.buff[j:j+1]
+                    if psblSprt == self.seperator or psblEnd in ['\r', '\n', '']:
                         field = self.buff[self.base_pos:i]
                         self.push_field(field)
                         self.state = STATES["qualifier_close"]
                         self.base_pos = i
                         break
                     else:
+                        # try to detect qualifier escape. e.g. "".
+                        # TODO: This logic is not correct when """ appears.
                         k = j + len(self.qualifier)
-                        afterStr = self.buff[j:k]
-                        k = j - len(self.qualifier)
-                        beforeStr = self.buff[k:j]
-                        if (afterStr == self.qualifier or beforeStr == self.qualifier) and self.qualifier != "":
+                        afterQual = self.buff[j:k]
+                        k = i - len(self.qualifier)
+                        beforeQual = self.buff[k:i]
+                        if (afterQual == self.qualifier or beforeQual == self.qualifier) and self.qualifier != "":
                             continue
                         else:
                             # escape qualifier by repeat it once
                             self.buff = self.buff[:j] + self.qualifier + self.buff[j:]
-                            self.base_pos += len(self.qualifier)
                             i += len(self.qualifier)
             if self.state == STATES["field_in_qualifier"]:
                 # searched to the end still can't find closing qualifier. something is wrong.
-                self.base_pos = len(self.buff)
+                self.state = STATES["invalid"]
     def state_end(self):
         if self.state == STATES["end"]:
             self.base_pos = len(self.buff)
