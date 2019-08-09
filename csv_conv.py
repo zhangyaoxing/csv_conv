@@ -85,15 +85,15 @@ class CSVStateMachine:
         length = len(buff)
         for i in range(0, length):
             self.state_qualifier()
-            self.state_qualifier_close()
-            self.state_seperator()
-            self.state_field()
-            self.state_field_in_qualifier()
+            self._state_qualifier_close()
+            self._state_seperator()
+            self._state_field()
+            self._state_field_in_qualifier()
             if self.state == STATES["end"] or self.state == STATES["invalid"]:
                 break
             
         if self.state == STATES["end"]:
-            self.state_end()
+            self._state_end()
         else:
             print >> sys.stderr, "Couldn't parse this line: {0}".format(line)
             if not self.skip_error:
@@ -110,7 +110,7 @@ class CSVStateMachine:
                 self.state = STATES["field_in_qualifier"]
             else:
                 self.state = STATES["field"]
-    def state_qualifier_close(self):
+    def _state_qualifier_close(self):
         if self.state == STATES["qualifier_close"]:
             self.base_pos += len(self.qualifier)
             i = self.base_pos + 1
@@ -119,7 +119,7 @@ class CSVStateMachine:
                 self.state = STATES["end"]
             else:
                 self.state = STATES["seperator"]
-    def state_seperator(self):
+    def _state_seperator(self):
         if self.state == STATES["seperator"]:
             i = self.base_pos + len(self.seperator)
             psblSprt = self.buff[self.base_pos:i]
@@ -128,13 +128,13 @@ class CSVStateMachine:
                 self.state = STATES["qualifier"]
             # else:
                 # Shouldn't happen since this is handled in "qualifier" state
-    def state_field(self):
+    def _state_field(self):
         if self.state == STATES["field"]:
             i = self.base_pos + 1
             psblEnd = self.buff[self.base_pos:i]
             if psblEnd in ['\r', '\n', '']:
                 # last field is empty
-                self.push_field("")
+                self._push_field("")
                 self.state = STATES["end"]
             else:
                 for i in range(self.base_pos, len(self.buff)):
@@ -142,7 +142,7 @@ class CSVStateMachine:
                     psblEnd = self.buff[i:j]
                     if psblEnd == self.seperator:
                         field = self.buff[self.base_pos:i]
-                        self.push_field(field)
+                        self._push_field(field)
                         self.state = STATES["seperator"]
                         self.base_pos = i
                         break
@@ -152,11 +152,11 @@ class CSVStateMachine:
                         if psblEnd in ['\r', '\n', '']:
                             # end of line
                             field = self.buff[self.base_pos:j]
-                            self.push_field(field)
+                            self._push_field(field)
                             self.state = STATES["end"]
                             break
 
-    def state_field_in_qualifier(self):
+    def _state_field_in_qualifier(self):
         if self.state == STATES["field_in_qualifier"]:
             for i in range(self.base_pos, len(self.buff) - len(self.qualifier) + 1):
                 j = i + len(self.qualifier)
@@ -170,7 +170,7 @@ class CSVStateMachine:
                     psblEnd = self.buff[j:j+1]
                     if psblSprt == self.seperator or psblEnd in ['\r', '\n', '']:
                         field = self.buff[self.base_pos:i]
-                        self.push_field(field)
+                        self._push_field(field)
                         self.state = STATES["qualifier_close"]
                         self.base_pos = i
                         break
@@ -190,7 +190,7 @@ class CSVStateMachine:
             if self.state == STATES["field_in_qualifier"]:
                 # searched to the end still can't find closing qualifier. something is wrong.
                 self.state = STATES["invalid"]
-    def state_end(self):
+    def _state_end(self):
         if self.state == STATES["end"]:
             self.base_pos = len(self.buff)
             line = ",".join(map(lambda f: '"{0}"'.format(f) if f != "" else "", self.fields))
@@ -205,12 +205,12 @@ class CSVStateMachine:
             self.output.write("\n")
             self.output.flush()
 
-    def push_field(self, field):
+    def _push_field(self, field):
         # TODO: handle time convertion
         if self.trim:
             field = field.strip()
         self.fields.append(field)
-    def detect_time(self):
+    def _detect_time(self):
         return
 
 if __name__ == "__main__":
