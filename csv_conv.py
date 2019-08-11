@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 import sys
 import io
-import codecs
-from pytz import timezone
 
 def print_help():
     # print help message

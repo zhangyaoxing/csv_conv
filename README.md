@@ -63,3 +63,7 @@ Seperator can be customized, not necessarily to be ",". Specify seperator by `-s
 ### Encoding detect
 
 For now `GBK` can be detected and converted to `UTF-8`. Will add other encoding detected later.
+
+### Auto-detect timezone
+
+Consider timezone like 
