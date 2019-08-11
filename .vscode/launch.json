@@ -11,8 +11,8 @@
             "program": "${file}",
             "args": [
                 "-s",
-                "'||'",
-                "csv4testing/sample.csv"
+                "','",
+                "csv4testing/test_case_1.csv"
             ],
             "console": "integratedTerminal"
         }

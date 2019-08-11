@@ -137,9 +137,8 @@ class CSVStateMachine:
                 self._push_field("")
                 self.state = STATES["end"]
             else:
-                length = len(self.buff)
                 i = self.base_pos
-                while i < length:
+                while i < len(self.buff):
                     j = i + len(self.seperator)
                     psbl_end = self.buff[i:j]
                     if psbl_end == self.seperator:
@@ -172,9 +171,8 @@ class CSVStateMachine:
 
     def _state_field_in_qualifier(self):
         if self.state == STATES["field_in_qualifier"]:
-            length = len(self.buff)
             i = self.base_pos
-            while i < length:
+            while i < len(self.buff):
                 j = i + len(self.qualifier)
                 curr_str = self.buff[i:j]
                 if curr_str == self.qualifier:
