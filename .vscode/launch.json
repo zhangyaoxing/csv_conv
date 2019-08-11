@@ -12,7 +12,7 @@
             "args": [
                 "-s",
                 "'||'",
-                "sample.csv"
+                "csv4testing/sample.csv"
             ],
             "console": "integratedTerminal"
         }
