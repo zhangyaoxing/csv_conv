@@ -59,3 +59,7 @@ Seperator can be customized, not necessarily to be ",". Specify seperator by `-s
 ./csv_conv.py -s '||' csv4testing/test_case_3.csv
 "hello","This is a test","This should be good.||""",
 ```
+
+### Encoding detect
+
+For now `GBK` can be detected and converted to `UTF-8`. Will add other encoding detected later.
