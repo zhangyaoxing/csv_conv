@@ -21,27 +21,27 @@ Options and arguments:
 
 ### Quote within quote
 
-Quotes should be immediated followed by seperator or line end or EOF, otherwise it's not a valid qualifier, and should be escaped. The following format should be fixed (_See `csv4testing/test_case_1.csv`_):
+Quotes should be immediated followed by seperator or line end or EOF, otherwise it's not a valid qualifier, and should be escaped. The following format should be fixed (_See `../testcase/test_case_1.csv`_):
 
 ```csv
 "What""s up!","I"m good",I"m also good,"I'm still good"","two quotes" shouldn't make any difference""
 ```
 
 ```bash
-./csv_conv.py csv4testing/test_case_1.csv
+./csv_conv.py ../testcase/test_case_1.csv
 "What""s up!","I""m good","I""m also good","""I'm still good""","two quotes"" shouldn't make any difference"""
 ```
 
 ### Begin/End with white space
 
-For fields that begin/end with white space are stript by default. Otherwise `mongoimport` type conversion wouldn't work properly (_See `csv4testing/test_case_2.csv`_):
+For fields that begin/end with white space are stript by default. Otherwise `mongoimport` type conversion wouldn't work properly (_See `../testcase/test_case_2.csv`_):
 
 ```csv
  red,	yellow,green ,"red	"
  ```
 
 ```bash
-./csv_conv.py csv4testing/test_case_2.csv
+./csv_conv.py ../testcase/test_case_2.csv
 "red","yellow","green","red"
 ```
 
@@ -49,14 +49,14 @@ If it's not expected behavior, use `-t false` to cancel it.
 
 ### Customize seperator
 
-Seperator can be customized, not necessarily to be ",". Specify seperator by `-s`. Note that seperators like `|` needs to be escaped in bash. E.g. (_See `csv4testing/test_case_3.csv`_):
+Seperator can be customized, not necessarily to be ",". Specify seperator by `-s`. Note that seperators like `|` needs to be escaped in bash. E.g. (_See `../testcase/test_case_3.csv`_):
 
 ```csv
 "hello"||"This is a test"||"This should be good.||"||""
 ```
 
 ```bash
-./csv_conv.py -s '||' csv4testing/test_case_3.csv
+./csv_conv.py -s '||' ../testcase/test_case_3.csv
 "hello","This is a test","This should be good.||""",
 ```
 
